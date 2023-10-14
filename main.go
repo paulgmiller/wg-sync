@@ -3,8 +3,10 @@ package main
 import (
 	"encoding/base64"
 	"fmt"
+	"io"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"strings"
 
@@ -21,6 +23,8 @@ type prettyPeer struct {
 	Endpoint   string `yaml:"Endpoint,omitempty"`
 	//KeepAlive
 }
+
+//lets try https://raw.githubusercontent.com/paulgmiller/paulgmiller.github.io/master/peers.yaml
 
 func PrettyPeer(p wgtypes.Peer) prettyPeer {
 	return prettyPeer{
@@ -54,7 +58,7 @@ func main() {
 	me := prettyPeer{
 		PublicKey:  d0.PublicKey.String(),
 		AllowedIPs: GetWireGaurdIP(d0.Name),
-		Endpoint:   fmt.Sprintf("%s:%d", GetOutboundIP().String(), d0.ListenPort),
+		Endpoint:   fmt.Sprintf("%s:%d", GetOutboundIP(), d0.ListenPort),
 	}
 
 	peers := map[string]prettyPeer{}
@@ -90,15 +94,15 @@ func GetWireGaurdIP(interfacename string) string {
 	return addrs[0].String()
 }
 
-// Get preferred outbound ip of this machine
-func GetOutboundIP() net.IP {
-	conn, err := net.Dial("udp", "8.8.8.8:80")
+func GetOutboundIP() string {
+	resp, err := http.Get("https://ifconfig.me")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer conn.Close()
-
-	localAddr := conn.LocalAddr().(*net.UDPAddr)
-
-	return localAddr.IP
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return string(body)
 }
