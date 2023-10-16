@@ -1,0 +1,78 @@
+/*
+Copyright © 2023 NAME HERE <EMAIL ADDRESS>
+*/
+package cmd
+
+import (
+	"log"
+	"net/http"
+	"os"
+
+	"github.com/paulgmiller/wg-sync/pretty"
+	"github.com/paulgmiller/wg-sync/wghelpers"
+	"github.com/spf13/cobra"
+	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
+	"gopkg.in/yaml.v2"
+)
+
+// rootCmd represents the base command when called without any subcommands
+var (
+	rootCmd = &cobra.Command{
+		Use:   "wg-sync",
+		Short: "syncs peers from a central url ",
+		Long:  `replaces all peers with those from a central url`,
+		Run:   sync,
+	}
+	cfgFile string
+)
+
+func Execute() {
+	err := rootCmd.Execute()
+	if err != nil {
+		os.Exit(1)
+	}
+}
+
+func init() {
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "url", "", "config file (default is $HOME/.wg-sync.yaml)")
+}
+
+func sync(cmd *cobra.Command, args []string) {
+
+	resp, err := http.Get(cfgFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+	peers := map[string]pretty.Peer{}
+	if resp.StatusCode == http.StatusOK {
+		decoder := yaml.NewDecoder(resp.Body)
+		err = decoder.Decode(&peers)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		log.Fatalf("got %d from %s", resp.StatusCode, cfgFile)
+	}
+
+	d0, err := wghelpers.GetDevice()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var peersconfig []wgtypes.PeerConfig
+	for _, peer := range peers {
+		if peer.PublicKey == d0.PublicKey.String() {
+			continue
+		}
+		p, err := peer.ToConfig()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		peersconfig = append(peersconfig, p)
+	}
+
+	wghelpers.SavePeers(d0.Name, peersconfig)
+
+}
