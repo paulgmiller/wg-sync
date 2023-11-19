@@ -1,7 +1,7 @@
 package pretty
 
 import (
-	"encoding/base64"
+	"fmt"
 	"net"
 	"strings"
 
@@ -20,7 +20,7 @@ type Peer struct {
 
 func New(p wgtypes.Peer) Peer {
 	return Peer{
-		PublicKey:  base64.StdEncoding.EncodeToString(p.PublicKey[:]),
+		PublicKey:  p.PublicKey.String(),
 		AllowedIPs: strings.Join(lo.Map(p.AllowedIPs, func(item net.IPNet, _ int) string { return item.String() }), ","),
 		//how do we know if these are public or temporary? is it fine to guess?
 		//Endpoint: p.Endpoint.String(),
@@ -28,9 +28,12 @@ func New(p wgtypes.Peer) Peer {
 }
 
 func (p Peer) ToConfig() (wgtypes.PeerConfig, error) {
-	pkey, err := base64.StdEncoding.DecodeString(p.PublicKey)
+	pkey, err := wgtypes.ParseKey(p.PublicKey)
 	if err != nil {
 		return wgtypes.PeerConfig{}, err
+	}
+	if len(pkey) != wgtypes.KeyLen {
+		return wgtypes.PeerConfig{}, fmt.Errorf("key length inocrrect %d should be %d", len(pkey), wgtypes.KeyLen)
 	}
 
 	var allowdedips []net.IPNet
