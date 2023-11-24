@@ -1,6 +1,7 @@
 package nethelpers
 
 import (
+	"errors"
 	"io"
 	"log"
 	"net"
@@ -38,4 +39,42 @@ func GetOutboundIP() string {
 		log.Fatal(err)
 	}
 	return string(body)
+}
+
+var NotFound error = errors.New("PublicIPNotFound")
+
+// this won't work with azure vms where the public up is dont thgouh nat
+func FindPublicIp() (net.Addr, error) {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return nil, err
+	}
+
+	var publicaddrs []net.Addr
+	for _, a := range addrs {
+		ip, _, err := net.ParseCIDR(a.String())
+		if err != nil {
+			return nil, err
+		}
+
+		//come back and support ipv6
+		if ip.IsPrivate() {
+			log.Printf("private %s", ip)
+			continue
+		}
+		if ip.IsLoopback() {
+			continue
+		}
+
+		if ip.To4() == nil {
+			continue
+		}
+		publicaddrs = append(publicaddrs, a)
+
+	}
+	if len(publicaddrs) == 0 {
+		return nil, NotFound
+	}
+	return publicaddrs[0], nil
+
 }

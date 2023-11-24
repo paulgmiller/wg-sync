@@ -4,6 +4,7 @@ Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -21,7 +22,7 @@ var (
 		Use:   "wg-sync",
 		Short: "syncs peers from a central url ",
 		Long:  `replaces all peers with those from a central url`,
-		Run:   sync,
+		RunE:  sync,
 	}
 	cfgFile string
 )
@@ -37,27 +38,27 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "url", "", "config file (default is $HOME/.wg-sync.yaml)")
 }
 
-func sync(cmd *cobra.Command, args []string) {
+func sync(cmd *cobra.Command, args []string) error {
 
 	resp, err := http.Get(cfgFile)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer resp.Body.Close()
 	peers := map[string]pretty.Peer{}
-	if resp.StatusCode == http.StatusOK {
-		decoder := yaml.NewDecoder(resp.Body)
-		err = decoder.Decode(&peers)
-		if err != nil {
-			log.Fatal(err)
-		}
-	} else {
-		log.Fatalf("got %d from %s", resp.StatusCode, cfgFile)
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("got %d from %s", resp.StatusCode, cfgFile)
+	}
+
+	decoder := yaml.NewDecoder(resp.Body)
+	err = decoder.Decode(&peers)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	d0, err := wghelpers.GetDevice()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	var peersconfig []wgtypes.PeerConfig
@@ -67,12 +68,12 @@ func sync(cmd *cobra.Command, args []string) {
 		}
 		p, err := peer.ToConfig()
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		peersconfig = append(peersconfig, p)
 	}
 
-	wghelpers.SavePeers(d0.Name, peersconfig)
+	return wghelpers.SavePeers(d0.Name, peersconfig)
 
 }
