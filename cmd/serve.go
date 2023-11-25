@@ -1,13 +1,20 @@
 package cmd
 
 import (
+	"context"
+	"encoding/json"
+	"io"
 	"log"
+	"net"
 	"net/http"
+	"os"
 
 	"github.com/paulgmiller/wg-sync/pretty"
 	"github.com/paulgmiller/wg-sync/wghelpers"
 	"github.com/spf13/cobra"
 )
+
+const defaultJoinPort = ":5000"
 
 // addCmd represents the add command
 var serveCmd = &cobra.Command{
@@ -25,30 +32,49 @@ func init() {
 func serve(cmd *cobra.Command, args []string) error {
 
 	http.HandleFunc("/peers", Peers)
+	cmd.Context()
+	//todo pass a context? figure out cancelation?
+	HaddleJoins(cmd.Context())
 
-	/*l, err := net.Listen("tcp", ":2000")
+	return nil
+	//return http.ListenAndServe(":8888", nil)
+
+}
+
+type joinRequest struct {
+	PublicKey string
+}
+
+type joinResponse struct {
+	Assignedip string
+	Peer       []pretty.Peer
+}
+
+func HaddleJoins(ctx context.Context) {
+	udpaddr, err := net.ResolveUDPAddr("udp", "127.0.0.1"+defaultJoinPort)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer l.Close()
+	log.Printf("Waitig for joins on %s", udpaddr.String())
 	for {
-		// Wait for a connection.
-		conn, err := l.Accept()
+
+		conn, err := net.ListenUDP("udp", udpaddr)
 		if err != nil {
 			log.Fatal(err)
 		}
-		// Handle the connection in a new goroutine.
-		// The loop then returns to accepting, so that
-		// multiple connections may be served concurrently.
-		go func(c net.Conn) {
-			// Echo all incoming data.
-			io.Copy(c, c)
-			// Shut down the connection.
-			c.Close()
-		}(conn)
-	*/
 
-	return http.ListenAndServe(":8888", nil)
+		log.Printf("Got  joins on %s", conn.RemoteAddr())
+
+		reader := io.TeeReader(conn, os.Stdout)
+		var jreq joinRequest
+		err := json.NewDecoder(reader).Decode()
+		if err != nil {
+			log.Printf()
+			conn.Close()
+			return
+		}
+		conn.Close()
+	}
 
 }
 

@@ -4,33 +4,54 @@ Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"fmt"
-	"net/http"
-	"os"
+	"encoding/json"
+	"log"
+	"net"
 
-	"github.com/paulgmiller/wg-sync/nethelpers"
-	"github.com/paulgmiller/wg-sync/pretty"
-	"github.com/paulgmiller/wg-sync/wghelpers"
-	"github.com/rb-go/namegen"
-	"github.com/samber/lo"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
 )
 
 // addCmd represents the add command
 var addCmd = &cobra.Command{
 	Use:   "add",
-	Short: "add current as a peer to sync list",
-	Long:  `pulls the current device's public key and adds it to the sync list merging with others`,
+	Short: "sends a join request to a listening wg-sync server",
+	Long:  `sends a joint request then takes the returned assigned ip and peer and updates wg config`,
 	RunE:  add,
 }
 
 func init() {
 	rootCmd.AddCommand(addCmd)
-	server = addCmd.Flags().BoolP("server", "s", false, "publish as a server which means we add an endpoint")
+	joinServer = *addCmd.Flags().StringP("server", "s", "127.0.0.1"+defaultJoinPort, "server ip  to send udp request to")
 }
 
+var joinServer string
+
 func add(cmd *cobra.Command, args []string) error {
+	/*d0, err := wghelpers.GetDevice()
+	if err != nil {
+		return err
+	}*/
+	jreq := joinRequest{
+		PublicKey: "DEADBEEFDEADBEEF", //d0.PublicKey.String(),
+	}
+
+	log.Printf("dialing %s", joinServer)
+
+	conn, err := net.Dial("udp", joinServer)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	err = json.NewEncoder(conn).Encode(jreq)
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+/* old and busted
 
 	resp, err := http.Get(cfgFile)
 	if err != nil {
@@ -66,3 +87,4 @@ func add(cmd *cobra.Command, args []string) error {
 	stdout := yaml.NewEncoder(os.Stdout)
 	return stdout.Encode(peers)
 }
+*/
