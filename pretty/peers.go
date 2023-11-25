@@ -2,11 +2,13 @@ package pretty
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"strings"
 
 	"github.com/samber/lo"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
+	"gopkg.in/yaml.v2"
 )
 
 type Peer struct {
@@ -25,6 +27,15 @@ func New(p wgtypes.Peer) Peer {
 		//how do we know if these are public or temporary? is it fine to guess?
 		//Endpoint: p.Endpoint.String(),
 	}
+}
+
+func Yaml(w io.Writer, peers ...wgtypes.Peer) error {
+	enc := yaml.NewEncoder(w)
+	var prettypeers []Peer
+	for _, p := range peers {
+		prettypeers = append(prettypeers, New(p))
+	}
+	return enc.Encode(prettypeers)
 }
 
 func (p Peer) ToConfig() (wgtypes.PeerConfig, error) {
