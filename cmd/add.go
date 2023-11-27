@@ -33,22 +33,45 @@ func add(cmd *cobra.Command, args []string) error {
 	}*/
 	jreq := joinRequest{
 		PublicKey: "DEADBEEFDEADBEEF", //d0.PublicKey.String(),
+		AuthToken: "TOTALLYSECRET",
 	}
 
-	log.Printf("dialing %s", joinServer)
+	resp, err := send(jreq)
+	if err != nil {
+		return err
+	}
+	log.Printf("got %s", resp.Assignedip)
+
+	jreq2 := joinRequest{
+		PublicKey: "amMRWDvsLUmNHn52xer2yl/UaAkXnDrd/HxUTRkEGXc=", //d0.PublicKey.String(),
+		AuthToken: "TOTALLYSECRET",
+	}
+	resp, err = send(jreq2)
+	if err != nil {
+		return err
+	}
+	log.Printf("got %s", resp.Assignedip)
+	return nil
+
+}
+
+func send(jReq joinRequest) (joinResponse, error) {
 
 	conn, err := net.Dial("udp", joinServer)
 	if err != nil {
-		return err
+		return joinResponse{}, err
 	}
+	log.Printf("dialing %s, %s", joinServer, conn.LocalAddr().String())
 	defer conn.Close()
-	err = json.NewEncoder(conn).Encode(jreq)
+	err = json.NewEncoder(conn).Encode(jReq)
 	if err != nil {
-		return err
+		return joinResponse{}, err
 	}
 
-	return nil
+	var jResp joinResponse
+	err = json.NewDecoder(conn).Decode(&jResp)
 
+	return jResp, err
 }
 
 /* old and busted

@@ -3,7 +3,7 @@ package cmd
 import (
 	"context"
 	"encoding/json"
-	"io"
+	"errors"
 	"log"
 	"net"
 	"net/http"
@@ -74,28 +74,56 @@ type joinResponse struct {
 func HaddleJoins(ctx context.Context) error {
 	udpaddr, err := net.ResolveUDPAddr("udp", "127.0.0.1"+defaultJoinPort)
 	if err != nil {
-		return err 
+		return err
 	}
 	conn, err := net.ListenUDP("udp", udpaddr)
 	if err != nil {
 		return err
 	}
-	log.Printf("Waitig for joins on %s", udpaddr.String())
-
+	log.Printf("Waiting for joins on %s", udpaddr.String())
 	go func() {
 		for {
-			//this simply cant handle simultanious requests. Would have to use readfromudp 
-			//maybe thats fine? but seems sketchy
-			reader := io.TeeReader(conn, os.Stdout)
-			var jreq joinRequest
-			err = json.NewDecoder(reader).Decode(&jreq)
+			buf := make([]byte, 4096) //how big should we be? will we go over multiple packets?
+			n, remoteAddr, err := conn.ReadFromUDP(buf)
 			if err != nil {
-				log.Printf("Failed to demarshall")
+				if !errors.Is(err, net.ErrClosed) {
+					log.Printf("Failed to read from udp: %s", err)
+				}
+				return
+			}
+			// Deserialize the JSON data into a Message struct
+			var jreq joinRequest
+			err = json.Unmarshal(buf[:n], &jreq)
+			if err != nil {
+				log.Printf("Failed to unmarshal: %s, %s", buf, err)
+
 				continue
 			}
+
+			log.Printf("got join request from %v, %s", remoteAddr, jreq.PublicKey)
+			jResp := joinResponse{
+				Assignedip: "10.0.0.100",
+				Peers: []pretty.Peer{
+					{
+						PublicKey:  "amMRWDvsLUmNHn52xer2yl/UaAkXnDrd/HxUTRkEGXc=",
+						AllowedIPs: "10.0.0.0/24",
+					},
+				},
+			}
+			respbuf, err := json.Marshal(jResp)
+			if err != nil {
+				log.Printf("Failed to enode: %s", err)
+				continue
+			}
+			_, err = conn.WriteToUDP(respbuf, remoteAddr)
+			if err != nil {
+				log.Printf("Failed to send: %s, %s", buf, err)
+				continue
+			}
+
 		}
-	}
-	<- ctx.Done()
+	}()
+	<-ctx.Done()
 	conn.Close()
 	log.Println("Listener closed")
 	return nil
