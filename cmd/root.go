@@ -22,7 +22,7 @@ var (
 		Use:   "wg-sync",
 		Short: "syncs peers from a central url ",
 		Long:  `replaces all peers with those from a central url`,
-		RunE:  sync,
+		RunE:  syncPeers,
 	}
 	cfgFile string
 )
@@ -38,7 +38,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "url", "", "config file (default is $HOME/.wg-sync.yaml)")
 }
 
-func sync(cmd *cobra.Command, args []string) error {
+func syncPeers(cmd *cobra.Command, args []string) error {
 
 	resp, err := http.Get(cfgFile)
 	if err != nil {

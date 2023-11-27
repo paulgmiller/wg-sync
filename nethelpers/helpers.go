@@ -10,22 +10,22 @@ import (
 	"github.com/samber/lo"
 )
 
-func GetWireGaurdIP(interfacename string) string {
+func GetWireGaurdCIDR(interfacename string) (net.Addr, error) {
 	ifaces, err := net.Interfaces()
 	if err != nil {
-		log.Fatalf("can't get interfaces: %v", err)
+		return nil, err
 	}
 
 	wginterface, found := lo.Find(ifaces, func(iface net.Interface) bool { return iface.Name == interfacename })
 	if !found {
-		log.Fatalf("can't get interfaces: %v", err)
+		return nil, err
 	}
 
 	addrs, err := wginterface.Addrs()
 	if err != nil {
-		log.Fatalf("can't get interface addrs: %v", err)
+		return nil, err
 	}
-	return addrs[0].String()
+	return addrs[0], nil
 }
 
 func GetOutboundIP() string {
