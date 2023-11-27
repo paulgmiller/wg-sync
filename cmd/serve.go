@@ -8,6 +8,9 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/paulgmiller/wg-sync/pretty"
 	"github.com/paulgmiller/wg-sync/wghelpers"
@@ -30,51 +33,72 @@ func init() {
 }
 
 func serve(cmd *cobra.Command, args []string) error {
-
 	http.HandleFunc("/peers", Peers)
-	cmd.Context()
-	//todo pass a context? figure out cancelation?
-	HaddleJoins(cmd.Context())
+	srv := http.Server{Addr: ":8888"}
 
-	return nil
-	//return http.ListenAndServe(":8888", nil)
+	ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
+	go func() {
+		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+			// Error starting or closing listener:
+			log.Fatalf("HTTP server ListenAndServe: %v", err)
+		}
+	}()
+
+	err := HaddleJoins(ctx)
+	if err != nil {
+		log.Printf("udp handler exited with %s", err)
+	}
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		// Error from closing listeners, or context timeout:
+		log.Printf("HTTP server Shutdown: %v", err)
+	}
+
+	return err
 }
 
 type joinRequest struct {
 	PublicKey string
+	AuthToken string
 }
 
 type joinResponse struct {
 	Assignedip string
-	Peer       []pretty.Peer
+	Peers      []pretty.Peer
 }
 
-func HaddleJoins(ctx context.Context) {
+func HaddleJoins(ctx context.Context) error {
 	udpaddr, err := net.ResolveUDPAddr("udp", "127.0.0.1"+defaultJoinPort)
 	if err != nil {
-		log.Fatal(err)
+		return err 
+	}
+	conn, err := net.ListenUDP("udp", udpaddr)
+	if err != nil {
+		return err
 	}
 	log.Printf("Waitig for joins on %s", udpaddr.String())
-	for {
 
-		conn, err := net.ListenUDP("udp", udpaddr)
-		if err != nil {
-			log.Fatal(err)
+	go func() {
+		for {
+			//this simply cant handle simultanious requests. Would have to use readfromudp 
+			//maybe thats fine? but seems sketchy
+			reader := io.TeeReader(conn, os.Stdout)
+			var jreq joinRequest
+			err = json.NewDecoder(reader).Decode(&jreq)
+			if err != nil {
+				log.Printf("Failed to demarshall")
+				continue
+			}
 		}
-
-		log.Printf("Got  joins on %s", conn.RemoteAddr())
-
-		reader := io.TeeReader(conn, os.Stdout)
-		var jreq joinRequest
-		err := json.NewDecoder(reader).Decode()
-		if err != nil {
-			log.Printf()
-			conn.Close()
-			return
-		}
-		conn.Close()
 	}
+	<- ctx.Done()
+	conn.Close()
+	log.Println("Listener closed")
+	return nil
 
 }
 
