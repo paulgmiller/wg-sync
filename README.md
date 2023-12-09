@@ -21,13 +21,16 @@ Instead what if you could download a tool on the new machine point it at a publi
 A server (virtual or otherwise) with a public ip. Need to be able to open udp ports on the public ip.
 
 ## Then what happens? 
-On your public server setup wg-sync serve. Get an OTP token.  On a new machine run wg-sync add and give it the the public ip/dns and token. Bam connected.
+On your public server setup wg-sync serve. Get an [TOTP token](https://github.com/sec51/twofactor) from that sever either locally or from other machine on wireguard network.  On a new machine run wg-sync add and give it the the public ip/dns and token. Bam connected.
 
 Under the covers we send udp packet with the udp token and added machines public ip. Once recived that is done get a new token. 
 
 ## Is this secure?
-Maybe not I probably fucked something up. The OTP token should be encypted or you could be man in the middled. We could encyrpt with the public key of the public server.
+Maybe not I probably fucked something up. The TOTP token should be encypted or you could be man in the middled. We could encyrpt with the public key of the public server.
 But thats harder to carry around/type in. Could put it in txt of DNS. TODO I guess. 
+
+## Surely somone has done this
+Maybe? Need to read more about [dsnet](https://github.com/naggie/dsnet) and [subspace](https://github.com/subspacecommunity/subspace)
 
 #Anything else?
 Yes i've been drinking bourbon. Why do you ask? 
