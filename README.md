@@ -28,3 +28,6 @@ Under the covers we send udp packet with the udp token and added machines public
 ## Is this secure?
 Maybe not I probably fucked something up. The OTP token should be encypted or you could be man in the middled. We could encyrpt with the public key of the public server.
 But thats harder to carry around/type in. Could put it in txt of DNS. TODO I guess. 
+
+#Anything else?
+Yes i've been drinking bourbon. Why do you ask? 
