@@ -30,7 +30,7 @@ Maybe not I probably fucked something up. The TOTP token should be encypted or y
 But thats harder to carry around/type in. Could put it in txt of DNS. TODO I guess. 
 
 ## Surely somone has done this
-Maybe? Need to read more about [dsnet](https://github.com/naggie/dsnet) and [subspace](https://github.com/subspacecommunity/subspace)
+Maybe? Need to read more about [dsnet](https://github.com/naggie/dsnet) and [subspace](https://github.com/subspacecommunity/subspace). Lots of other [neat stuff here](https://github.com/cedrickchee/awesome-wireguard)
 
-#Anything else?
+## Anything else?
 Yes i've been drinking bourbon. Why do you ask? 
