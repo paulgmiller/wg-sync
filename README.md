@@ -1,3 +1,6 @@
+[![Build Status](https://gitlab.com/paulgmiller/wg-wsync/badges/master/pipeline.svg)](https://gitlab.com/paulgmiller/wg-wsync) [![GoDoc](https://godoc.org/github.com/paulgmiller/wg-sync)](https://godoc.org/github.com/paulgmiller/wg-sync) [![Go Report Card](https://goreportcard.com/badge/github.com/paulgmiller/wg-sync)](https://goreportcard.com/report/github.com/paulgmiller/wg-sync)
+
+
 # What is this?
 
 A way to set up a [wireguard](https://www.wireguard.com/) network. Having a simple network you can depend on to be secure is pretty great. Open up that un-auth website. Share files.
