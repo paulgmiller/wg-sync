@@ -1,4 +1,4 @@
-[![Build Status](https://gitlab.com/paulgmiller/wg-wsync/badges/master/pipeline.svg)](https://gitlab.com/paulgmiller/wg-wsync) [![GoDoc](https://godoc.org/github.com/paulgmiller/wg-sync)](https://godoc.org/github.com/paulgmiller/wg-sync) [![Go Report Card](https://goreportcard.com/badge/github.com/paulgmiller/wg-sync)](https://goreportcard.com/report/github.com/paulgmiller/wg-sync)
+[![Go](https://github.com/paulgmiller/wg-sync/actions/workflows/go.yml/badge.svg)](https://github.com/paulgmiller/wg-sync/actions/workflows/go.yml) [![Go Report Card](https://goreportcard.com/badge/github.com/paulgmiller/wg-sync)](https://goreportcard.com/report/github.com/paulgmiller/wg-sync)
 
 
 # What is this?
