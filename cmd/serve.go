@@ -16,6 +16,7 @@ import (
 
 	"github.com/paulgmiller/wg-sync/nethelpers"
 	"github.com/paulgmiller/wg-sync/pretty"
+	"github.com/paulgmiller/wg-sync/token"
 	"github.com/paulgmiller/wg-sync/wghelpers"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
@@ -40,6 +41,8 @@ func init() {
 func serve(cmd *cobra.Command, args []string) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/peers", Peers)
+	mux.Handle("/token", token.New())
+
 	srv := http.Server{Addr: ":8888", Handler: mux}
 
 	ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
