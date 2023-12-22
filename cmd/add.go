@@ -4,10 +4,9 @@ Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"encoding/json"
 	"log"
-	"net"
 
+	"github.com/paulgmiller/wg-sync/udpjoin"
 	"github.com/spf13/cobra"
 )
 
@@ -31,47 +30,28 @@ func add(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}*/
-	jreq := joinRequest{
+	jreq := udpjoin.Request{
 		PublicKey: "DEADBEEFDEADBEEF", //d0.PublicKey.String(),
 		AuthToken: "TOTALLYSECRET",
 	}
 
-	resp, err := send(jreq)
+	resp, err := udpjoin.Send(joinServer, jreq)
 	if err != nil {
 		return err
 	}
 	log.Printf("got %s", resp.Assignedip)
 
-	jreq2 := joinRequest{
+	jreq2 := udpjoin.Request{
 		PublicKey: "amMRWDvsLUmNHn52xer2yl/UaAkXnDrd/HxUTRkEGXc=", //d0.PublicKey.String(),
 		AuthToken: "TOTALLYSECRET",
 	}
-	resp, err = send(jreq2)
+	resp, err = udpjoin.Send(joinServer, jreq2)
 	if err != nil {
 		return err
 	}
 	log.Printf("got %s", resp.Assignedip)
 	return nil
 
-}
-
-func send(jReq joinRequest) (joinResponse, error) {
-
-	conn, err := net.Dial("udp", joinServer)
-	if err != nil {
-		return joinResponse{}, err
-	}
-	log.Printf("dialing %s, %s", joinServer, conn.LocalAddr().String())
-	defer conn.Close()
-	err = json.NewEncoder(conn).Encode(jReq)
-	if err != nil {
-		return joinResponse{}, err
-	}
-
-	var jResp joinResponse
-	err = json.NewDecoder(conn).Decode(&jResp)
-
-	return jResp, err
 }
 
 /* old and busted
