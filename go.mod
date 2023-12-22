@@ -4,6 +4,7 @@ go 1.21.1
 
 require (
 	github.com/BurntSushi/toml v1.3.2 // indirect
+	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/josharian/native v1.1.0 // indirect
