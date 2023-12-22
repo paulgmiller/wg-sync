@@ -24,6 +24,10 @@ func New() *token {
 
 }
 
+func (o *token) Validate(token string) error {
+	return o.totp.Validate(token)
+}
+
 func (o *token) ServeHTTP(resp http.ResponseWriter, _ *http.Request) {
 	qr, err := o.totp.QR()
 	if err != nil {

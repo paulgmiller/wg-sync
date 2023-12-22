@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/paulgmiller/wg-sync/nethelpers"
 	"github.com/paulgmiller/wg-sync/pretty"
@@ -32,12 +33,19 @@ type cidrAllocator interface {
 	Allocate() (net.IP, error)
 }
 
+const sendTimeout = time.Second * 3
+
 func Send(server string, jReq Request) (Response, error) {
 
 	conn, err := net.Dial("udp", server)
 	if err != nil {
 		return Response{}, err
 	}
+
+	if err := conn.SetDeadline(time.Now().Add(sendTimeout)); err != nil {
+		return Response{}, err
+	}
+
 	log.Printf("dialing %s, %s", server, conn.LocalAddr().String())
 	defer conn.Close()
 	err = json.NewEncoder(conn).Encode(jReq)
@@ -51,12 +59,16 @@ func Send(server string, jReq Request) (Response, error) {
 	return jResp, err
 }
 
-type joiner struct {
-	lock sync.Mutex
-	//token
+type authorizer interface {
+	Validate(token string) error
 }
 
-func New() *joiner {
+type joiner struct {
+	lock sync.Mutex
+	auth authorizer
+}
+
+func New(a authorizer) *joiner {
 	return &joiner{}
 }
 
@@ -93,10 +105,9 @@ func (j *joiner) HaddleJoins(ctx context.Context, alloc cidrAllocator) error {
 				continue
 			}
 
-			//obviously bad.
-			if jreq.AuthToken != "HOKEYPOKEYSMOKEY" {
+			if err := j.auth.Validate(jreq.AuthToken); err != nil {
 				log.Printf("bad auth token from %v, %s", remoteAddr, jreq.PublicKey)
-				//ban them for a extended period?
+				//ban them for a extended period? Just backoff?
 				continue
 			}
 

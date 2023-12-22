@@ -39,9 +39,11 @@ func (c cidrAllocatorImpl) Allocate() (net.IP, error) {
 }
 
 func serve(cmd *cobra.Command, args []string) error {
+	t := token.New()
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/peers", Peers)
-	mux.Handle("/token", token.New())
+	mux.Handle("/token", t)
 
 	srv := http.Server{Addr: ":8888", Handler: mux}
 
@@ -56,7 +58,8 @@ func serve(cmd *cobra.Command, args []string) error {
 		}
 	}()
 
-	err := udpjoin.New().HaddleJoins(ctx, cidrAllocatorImpl{})
+	joiner := udpjoin.New(t)
+	err := joiner.HaddleJoins(ctx, cidrAllocatorImpl{})
 	if err != nil {
 		log.Printf("udp handler exited with %s", err)
 	}

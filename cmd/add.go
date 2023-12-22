@@ -32,7 +32,7 @@ func add(cmd *cobra.Command, args []string) error {
 	}*/
 	jreq := udpjoin.Request{
 		PublicKey: "DEADBEEFDEADBEEF", //d0.PublicKey.String(),
-		AuthToken: "TOTALLYSECRET",
+		AuthToken: "HOKEYPOKEYSMOKEY",
 	}
 
 	resp, err := udpjoin.Send(joinServer, jreq)
