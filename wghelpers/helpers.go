@@ -7,7 +7,22 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
-func GetDevice() (*wgtypes.Device, error) {
+type wghelper struct {
+	d *wgtypes.Device
+}
+
+func (wg *wghelper) PublicKey() string { return wg.d.PublicKey.String() }
+func (wg *wghelper) ListenPort() int   { return wg.d.ListenPort }
+
+func (wg *wghelper) LookupPeer(publickey string) (string, bool) {
+	return "", false
+}
+
+func (wg *wghelper) Peers() []wgtypes.Peer {
+	return wg.d.Peers
+}
+
+func GetDevice() (*wghelper, error) {
 
 	wg, err := wgctrl.New()
 	if err != nil {
@@ -27,7 +42,10 @@ func GetDevice() (*wgtypes.Device, error) {
 		return nil, fmt.Errorf("multiple devices: TODO specify one as arg")
 	}
 
-	return devices[0], nil
+	return &wghelper{d: devices[0]}, nil
+}
+func (wg *wghelper) AddPeer(publickey, cidr string) error {
+	return nil
 }
 
 func SavePeers(name string, peers []wgtypes.PeerConfig) error {
@@ -38,6 +56,7 @@ func SavePeers(name string, peers []wgtypes.PeerConfig) error {
 	defer wg.Close()
 
 	return wg.ConfigureDevice(name, wgtypes.Config{
-		Peers:        peers,
-		ReplacePeers: true})
+		Peers: peers,
+		//	ReplacePeers: true
+	})
 }

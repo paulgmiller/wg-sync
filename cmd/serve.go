@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -27,7 +28,10 @@ var serveCmd = &cobra.Command{
 	RunE:  serve,
 }
 
+var password string
+
 func init() {
+	serveCmd.Flags().StringVarP(&password, "password", "p", "", "use a dumb password (insercure)")
 	rootCmd.AddCommand(serveCmd)
 	//probably have to pass in public ip and maye cidr?
 }
@@ -36,6 +40,24 @@ type cidrAllocatorImpl struct{}
 
 func (c cidrAllocatorImpl) Allocate() (net.IP, error) {
 	return net.ParseIP("10.0.0.100"), nil
+}
+
+func (c cidrAllocatorImpl) CIDR() *net.IPNet {
+	_, net, err := net.ParseCIDR("10.0.0.0/24")
+	if err != nil {
+		panic(err)
+	}
+	return net
+}
+
+// this is for testing please don't use
+type dumbpassword string
+
+func (p dumbpassword) Validate(token string) error {
+	if string(p) != token {
+		return fmt.Errorf("fool %s is not the password")
+	}
+	return nil
 }
 
 func serve(cmd *cobra.Command, args []string) error {
@@ -58,8 +80,17 @@ func serve(cmd *cobra.Command, args []string) error {
 		}
 	}()
 
-	joiner := udpjoin.New(t)
-	err := joiner.HaddleJoins(ctx, cidrAllocatorImpl{})
+	//get this lazily for each add.
+	wg, err := wghelpers.GetDevice()
+	if err != nil {
+		return err
+	}
+	alloc := cidrAllocatorImpl{}
+	joiner := udpjoin.New(t, alloc, wg)
+	if password != "" {
+		joiner = udpjoin.New(dumbpassword(password), alloc, wg)
+	}
+	err = joiner.HaddleJoins(ctx)
 	if err != nil {
 		log.Printf("udp handler exited with %s", err)
 	}
@@ -85,7 +116,7 @@ func Peers(resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := pretty.Yaml(resp, d0.Peers...); err != nil {
+	if err := pretty.Yaml(resp, d0.Peers()...); err != nil {
 		log.Printf("error marsalling peers %s", err)
 		resp.WriteHeader(http.StatusInternalServerError)
 		return

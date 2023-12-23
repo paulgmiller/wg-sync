@@ -63,7 +63,7 @@ func syncPeers(cmd *cobra.Command, args []string) error {
 
 	var peersconfig []wgtypes.PeerConfig
 	for _, peer := range peers {
-		if peer.PublicKey == d0.PublicKey.String() {
+		if peer.PublicKey == d0.PublicKey() {
 			continue
 		}
 		p, err := peer.ToConfig()
@@ -74,6 +74,7 @@ func syncPeers(cmd *cobra.Command, args []string) error {
 		peersconfig = append(peersconfig, p)
 	}
 
-	return wghelpers.SavePeers(d0.Name, peersconfig)
+	return nil
+	//return wghelpers.SavePeers(d0.Name, peersconfig)
 
 }

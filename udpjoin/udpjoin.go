@@ -7,14 +7,10 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"sync"
 	"time"
 
 	"github.com/paulgmiller/wg-sync/nethelpers"
 	"github.com/paulgmiller/wg-sync/pretty"
-	"github.com/paulgmiller/wg-sync/wghelpers"
-	"github.com/samber/lo"
-	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
 const defaultJoinPort = ":5000"
@@ -27,10 +23,6 @@ type Request struct {
 type Response struct {
 	Assignedip string
 	Peers      []pretty.Peer
-}
-
-type cidrAllocator interface {
-	Allocate() (net.IP, error)
 }
 
 const sendTimeout = time.Second * 3
@@ -63,17 +55,34 @@ type authorizer interface {
 	Validate(token string) error
 }
 
-type joiner struct {
-	lock sync.Mutex
-	auth authorizer
+type cidrAllocator interface {
+	Allocate() (net.IP, error)
+	CIDR() *net.IPNet
 }
 
-func New(a authorizer) *joiner {
-	return &joiner{}
+type wgDevice interface {
+	PublicKey() string
+	ListenPort() int
+	LookupPeer(publickey string) (string, bool)
+	AddPeer(publickey, cidr string) error
+}
+
+type joiner struct {
+	auth  authorizer
+	alloc cidrAllocator
+	dev   wgDevice
+}
+
+func New(auth authorizer, alloc cidrAllocator, dev wgDevice) *joiner {
+	return &joiner{
+		auth:  auth,
+		alloc: alloc,
+		dev:   dev,
+	}
 }
 
 // TODO listen on all ips
-func (j *joiner) HaddleJoins(ctx context.Context, alloc cidrAllocator) error {
+func (j *joiner) HaddleJoins(ctx context.Context) error {
 	udpaddr, err := net.ResolveUDPAddr("udp", "127.0.0.1"+defaultJoinPort)
 	if err != nil {
 		return err
@@ -101,7 +110,6 @@ func (j *joiner) HaddleJoins(ctx context.Context, alloc cidrAllocator) error {
 			err = json.Unmarshal(buf[:n], &jreq)
 			if err != nil {
 				log.Printf("Failed to unmarshal: %s, %s", buf, err)
-
 				continue
 			}
 
@@ -112,7 +120,7 @@ func (j *joiner) HaddleJoins(ctx context.Context, alloc cidrAllocator) error {
 			}
 
 			log.Printf("got join request from %v, %s", remoteAddr, jreq.PublicKey)
-			jResp, err := j.GenerateResponse(jreq, alloc)
+			jResp, err := j.GenerateResponse(jreq)
 			if err != nil {
 				log.Printf("Failed to generate response %s", err)
 				continue
@@ -135,45 +143,35 @@ func (j *joiner) HaddleJoins(ctx context.Context, alloc cidrAllocator) error {
 
 }
 
-func (j *joiner) GenerateResponse(jreq Request, alloc cidrAllocator) (Response, error) {
-	j.lock.Lock()
-	defer j.lock.Unlock()
+func (j *joiner) GenerateResponse(jreq Request) (Response, error) {
 
-	d0, err := wghelpers.GetDevice()
-	if err != nil {
-		return Response{}, err
-	}
-
-	var asssignedip string
-	existing, found := lo.Find(d0.Peers, func(p wgtypes.Peer) bool { return p.PublicKey.String() == jreq.PublicKey })
+	assignedip, found := j.dev.LookupPeer(jreq.PublicKey)
 	if found { //should we also check that the ip is the same?
 		log.Printf("peer %s already exists", jreq.PublicKey)
-		asssignedip = existing.AllowedIPs[0].String()
 	} else {
-		ip, err := alloc.Allocate()
+		ip, err := j.alloc.Allocate()
 		if err != nil {
 			//not nice to not tell them sorry? But then we need an error protocol
 			return Response{}, err
 		}
-		asssignedip = ip.String()
+		assignedip = ip.String()
+
 	}
 
-	//ad the peer to us before we return anything
+	//add the peer to us before we return anything
 
-	cidr, err := nethelpers.GetWireGaurdCIDR(d0.Name)
-	if err != nil {
-		return Response{}, err
-	}
+	//cidr, err := nethelpers.GetWireGaurdCIDR(j.dev.Name)
 
 	//ip, cinet.ParseCIDR(cidr.String())
 
 	return Response{
-		Assignedip: asssignedip,
+		Assignedip: assignedip,
 		Peers: []pretty.Peer{
 			{
-				PublicKey:  d0.PublicKey.String(),
-				AllowedIPs: cidr.String(),                                                   //too much throttle down to /32?
-				Endpoint:   fmt.Sprintf("%s:%d", nethelpers.GetOutboundIP(), d0.ListenPort), //just pass this in instead of trying to detect it?
+				PublicKey: j.dev.PublicKey(),
+				//is the right ting to do?
+				AllowedIPs: j.alloc.CIDR().String(),                                              //too much throttle down to /32?
+				Endpoint:   fmt.Sprintf("%s:%d", nethelpers.GetOutboundIP(), j.dev.ListenPort()), //just pass this in instead of trying to detect it?
 			},
 		},
 	}, nil
