@@ -3,6 +3,7 @@ package wghelpers
 import (
 	"fmt"
 
+	"github.com/paulgmiller/wg-sync/pretty"
 	"golang.zx2c4.com/wireguard/wgctrl"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
@@ -45,18 +46,23 @@ func GetDevice() (*wghelper, error) {
 	return &wghelper{d: devices[0]}, nil
 }
 func (wg *wghelper) AddPeer(publickey, cidr string) error {
-	return nil
-}
-
-func SavePeers(name string, peers []wgtypes.PeerConfig) error {
-	wg, err := wgctrl.New()
+	wgc, err := wgctrl.New()
 	if err != nil {
 		return err
 	}
-	defer wg.Close()
+	defer wgc.Close()
+	peer, err := pretty.Peer{
+		PublicKey:  publickey,
+		AllowedIPs: cidr,
+	}.ToConfig()
+	if err != nil {
+		return err
+	}
+	return wgc.ConfigureDevice(wg.d.Name, wgtypes.Config{
 
-	return wg.ConfigureDevice(name, wgtypes.Config{
-		Peers: peers,
+		Peers: []wgtypes.PeerConfig{
+			peer,
+		},
 		//	ReplacePeers: true
 	})
 }

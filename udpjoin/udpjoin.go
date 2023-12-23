@@ -162,8 +162,6 @@ func (j *joiner) GenerateResponse(jreq Request) (Response, error) {
 
 	//cidr, err := nethelpers.GetWireGaurdCIDR(j.dev.Name)
 
-	//ip, cinet.ParseCIDR(cidr.String())
-
 	return Response{
 		Assignedip: assignedip,
 		Peers: []pretty.Peer{

@@ -12,7 +12,6 @@ import (
 	"github.com/paulgmiller/wg-sync/pretty"
 	"github.com/paulgmiller/wg-sync/wghelpers"
 	"github.com/spf13/cobra"
-	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	"gopkg.in/yaml.v2"
 )
 
@@ -56,25 +55,23 @@ func syncPeers(cmd *cobra.Command, args []string) error {
 		log.Fatal(err)
 	}
 
-	d0, err := wghelpers.GetDevice()
+	d, err := wghelpers.GetDevice()
 	if err != nil {
 		return err
 	}
 
-	var peersconfig []wgtypes.PeerConfig
 	for _, peer := range peers {
-		if peer.PublicKey == d0.PublicKey() {
+		if peer.PublicKey == d.PublicKey() {
 			continue
 		}
-		p, err := peer.ToConfig()
-		if err != nil {
-			return err
+		//todo make sure we don't duplocate ips?
+		if _, found := d.LookupPeer(peer.PublicKey); !found {
+			//todo endpoint?
+			d.AddPeer(peer.PublicKey, peer.AllowedIPs)
 		}
 
-		peersconfig = append(peersconfig, p)
 	}
 
 	return nil
-	//return wghelpers.SavePeers(d0.Name, peersconfig)
 
 }
