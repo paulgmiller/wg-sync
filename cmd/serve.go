@@ -33,7 +33,7 @@ var password string
 func init() {
 	serveCmd.Flags().StringVarP(&password, "password", "p", "", "use a dumb password (insercure)")
 	rootCmd.AddCommand(serveCmd)
-	//probably have to pass in public ip and maye cidr?
+	//probably have to pass in public ip and maybe cidr?
 }
 
 type cidrAllocatorImpl struct{}

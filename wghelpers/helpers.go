@@ -2,6 +2,7 @@ package wghelpers
 
 import (
 	"fmt"
+	"net"
 
 	"github.com/paulgmiller/wg-sync/pretty"
 	"golang.zx2c4.com/wireguard/wgctrl"
@@ -9,7 +10,9 @@ import (
 )
 
 type wghelper struct {
-	d *wgtypes.Device
+	d       *wgtypes.Device
+	cidr    *net.IPNet
+	firstip net.IP
 }
 
 func (wg *wghelper) PublicKey() string { return wg.d.PublicKey.String() }
@@ -19,8 +22,49 @@ func (wg *wghelper) LookupPeer(publickey string) (string, bool) {
 	return "", false
 }
 
-func (wg *wghelper) Peers() []wgtypes.Peer {
-	return wg.d.Peers
+func (wg *wghelper) CIDR() *net.IPNet {
+	return wg.cidr
+}
+
+func (wg *wghelper) Allocate() (net.IP, error) {
+	var candidate net.IP
+	copy(candidate, wg.firstip)
+	for {
+		if !wg.cidr.Contains(candidate) {
+			return net.IP{}, fmt.Errorf("no more ips left in %s", wg.cidr)
+		}
+
+		for _, p := range wg.d.Peers {
+			for _, used := range p.AllowedIPs {
+				if !used.Contains(candidate) {
+					return candidate, nil
+				}
+			}
+		}
+		inc(candidate)
+	}
+}
+func inc(ip net.IP) {
+	for i := len(ip) - 1; i >= 0; i-- {
+		ip[i]++
+		if ip[i] != 0 {
+			break
+		}
+	}
+}
+
+func WithCidr(cidr string) (*wghelper, error) {
+	ip, mask, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return nil, err
+	}
+	wghelper, err := GetDevice()
+	if err != nil {
+		return nil, err
+	}
+	wghelper.cidr = mask
+	wghelper.firstip = ip
+	return wghelper, nil
 }
 
 func GetDevice() (*wghelper, error) {
@@ -45,6 +89,7 @@ func GetDevice() (*wghelper, error) {
 
 	return &wghelper{d: devices[0]}, nil
 }
+
 func (wg *wghelper) AddPeer(publickey, cidr string) error {
 	wgc, err := wgctrl.New()
 	if err != nil {
