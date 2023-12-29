@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/paulgmiller/wg-sync/nethelpers"
 	"github.com/paulgmiller/wg-sync/pretty"
 	"golang.zx2c4.com/wireguard/wgctrl"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
@@ -16,8 +17,11 @@ type wghelper struct {
 }
 
 func (wg *wghelper) PublicKey() string { return wg.d.PublicKey.String() }
-//allow passing in get outbound ip/
-func (wg *wghelper) Endpoint() string   { return fmt.Sprintf("%s:%d", nethelpers.GetOutboundIP(), wg.d.ListenPort() }
+
+// allow passing in get outbound ip/
+func (wg *wghelper) Endpoint() string {
+	return fmt.Sprintf("%s:%d", nethelpers.GetOutboundIP(), wg.d.ListenPort)
+}
 
 func (wg *wghelper) LookupPeer(publickey string) (string, bool) {
 	return "", false
@@ -92,13 +96,10 @@ func GetDevice() (*wghelper, error) {
 	return &wghelper{d: devices[0]}, nil
 }
 
-func (wg *wghelper) SetIP(ip string) err {
-
-	iface, err := net.InterfaceByName(wg.d.Name)
-	if err != nil {
-		return err
-	}
-	iface.Addrs()
+func (wg *wghelper) SetIP(ip string) error {
+	//in linux exe ip i
+	//exec.Command("ip" )
+	return nil
 }
 
 func (wg *wghelper) AddPeer(publickey, cidr string) error {
