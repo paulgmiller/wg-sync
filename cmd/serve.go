@@ -69,7 +69,7 @@ func serve(cmd *cobra.Command, args []string) error {
 	mux.Handle("/token", t)
 	//add a validate one for fun?
 
-	srv := http.Server{Addr: ":8888", Handler: mux}
+	srv := http.Server{Addr: ":8889", Handler: mux}
 
 	//todo gracefully shut both servers  down.
 	ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
@@ -93,7 +93,7 @@ func serve(cmd *cobra.Command, args []string) error {
 	}
 	err = joiner.HaddleJoins(ctx)
 	if err != nil {
-		log.Printf("udp handler exited with %s", err)
+		log.Fatalf("udp handler exited with %s", err)
 	}
 	log.Printf("up and seving")
 	<-ctx.Done()

@@ -22,7 +22,7 @@ var addCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(addCmd)
 	joinServer = *addCmd.Flags().StringP("server", "s", "127.0.0.1"+defaultJoinPort, "server ip  to send udp request to")
-	thetoken = *addCmd.Flags().StringP("token", "t", "empty")
+	thetoken = *addCmd.Flags().StringP("token", "t", "empty", "otop autenticator token to send to server")
 }
 
 var joinServer, thetoken string
@@ -43,7 +43,8 @@ func add(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("got %s", resp.Assignedip)
+	log.Printf("got %+v", resp)
+	return nil
 
 }
 

@@ -99,6 +99,12 @@ func GetDevice() (*wghelper, error) {
 func (wg *wghelper) SetIP(ip string) error {
 	//in linux exe ip i
 	//exec.Command("ip" )
+	w, err := wgctrl.New()
+	if err != nil {
+		return err
+	}
+	defer w.Close()
+
 	return nil
 }
 
