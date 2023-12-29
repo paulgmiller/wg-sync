@@ -96,18 +96,6 @@ func GetDevice() (*wghelper, error) {
 	return &wghelper{d: devices[0]}, nil
 }
 
-func (wg *wghelper) SetIP(ip string) error {
-	//in linux exe ip i
-	//exec.Command("ip" )
-	w, err := wgctrl.New()
-	if err != nil {
-		return err
-	}
-	defer w.Close()
-
-	return nil
-}
-
 func (wg *wghelper) AddPeer(publickey, cidr string) error {
 	wgc, err := wgctrl.New()
 	if err != nil {
