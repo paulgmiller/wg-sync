@@ -56,7 +56,7 @@ type dumbpassword string
 
 func (p dumbpassword) Validate(token string) error {
 	if string(p) != token {
-		return fmt.Errorf("fool %s is not the password")
+		return fmt.Errorf("fool %s is not the password", token)
 	}
 	return nil
 }
@@ -93,7 +93,8 @@ func serve(cmd *cobra.Command, args []string) error {
 	}
 	err = joiner.HaddleJoins(ctx)
 	if err != nil {
-		log.Fatalf("udp handler exited with %s", err)
+		log.Printf("udp handler exited with %s", err)
+		return err
 	}
 	log.Printf("up and seving")
 	<-ctx.Done()

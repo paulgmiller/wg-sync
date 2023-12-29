@@ -62,7 +62,7 @@ func TestJoin(t *testing.T) {
 
 	log.Printf("got %s", resp.Assignedip)
 
-	if resp.Assignedip != net.IPv4(10, 1, 0, 5).String() {
+	if resp.Assignedip != "10.1.0.5/32" {
 		t.Fatalf("ddidn't get back expeced ip")
 	}
 

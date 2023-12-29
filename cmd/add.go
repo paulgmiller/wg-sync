@@ -5,17 +5,20 @@ package cmd
 
 import (
 	"log"
+	"os"
 
+	"github.com/go-ini/ini"
+	"github.com/paulgmiller/wg-sync/pretty"
 	"github.com/paulgmiller/wg-sync/udpjoin"
-	"github.com/paulgmiller/wg-sync/wghelpers"
 	"github.com/spf13/cobra"
+	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
 // addCmd represents the add command
 var addCmd = &cobra.Command{
 	Use:   "add",
 	Short: "sends a join request to a listening wg-sync server",
-	Long:  `sends a joint request then takes the returned assigned ip and peer and updates wg config`,
+	Long:  `sends a join request then takes the returned assigned ip and peer and generates a wq-quick config`,
 	RunE:  add,
 }
 
@@ -28,14 +31,16 @@ func init() {
 var joinServer, thetoken string
 
 func add(cmd *cobra.Command, args []string) error {
-	d0, err := wghelpers.GetDevice()
+	private, err := wgtypes.GenerateKey()
 	if err != nil {
-		//TODO just add an interface?
 		return err
 	}
 
+	//todo reuse device if exists?
+	//d0, err := wghelpers.GetDevice()
+
 	jreq := udpjoin.Request{
-		PublicKey: d0.PublicKey(),
+		PublicKey: private.PublicKey().String(),
 		AuthToken: thetoken,
 	}
 
@@ -44,6 +49,20 @@ func add(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	log.Printf("got %+v", resp)
+
+	conf := ini.Empty()
+
+	iface, err := conf.NewSection("Interface")
+	if err != nil {
+		return err
+	}
+	iface.NewKey("PrivateKey", private.String())
+	iface.NewKey("Address", resp.Assignedip)
+
+	pretty.Ini(conf, resp.Peers...)
+
+	conf.WriteTo(os.Stdout)
+
 	return nil
 
 }
