@@ -16,7 +16,8 @@ type wghelper struct {
 }
 
 func (wg *wghelper) PublicKey() string { return wg.d.PublicKey.String() }
-func (wg *wghelper) ListenPort() int   { return wg.d.ListenPort }
+//allow passing in get outbound ip/
+func (wg *wghelper) Endpoint() string   { return fmt.Sprintf("%s:%d", nethelpers.GetOutboundIP(), wg.d.ListenPort() }
 
 func (wg *wghelper) LookupPeer(publickey string) (string, bool) {
 	return "", false
@@ -44,6 +45,7 @@ func (wg *wghelper) Allocate() (net.IP, error) {
 		inc(candidate)
 	}
 }
+
 func inc(ip net.IP) {
 	for i := len(ip) - 1; i >= 0; i-- {
 		ip[i]++
@@ -90,6 +92,15 @@ func GetDevice() (*wghelper, error) {
 	return &wghelper{d: devices[0]}, nil
 }
 
+func (wg *wghelper) SetIP(ip string) err {
+
+	iface, err := net.InterfaceByName(wg.d.Name)
+	if err != nil {
+		return err
+	}
+	iface.Addrs()
+}
+
 func (wg *wghelper) AddPeer(publickey, cidr string) error {
 	wgc, err := wgctrl.New()
 	if err != nil {
@@ -110,4 +121,8 @@ func (wg *wghelper) AddPeer(publickey, cidr string) error {
 		},
 		//	ReplacePeers: true
 	})
+}
+
+func (wg *wghelper) Peers() []wgtypes.Peer {
+	return wg.d.Peers
 }

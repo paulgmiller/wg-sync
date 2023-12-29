@@ -28,6 +28,8 @@ func GetWireGaurdCIDR(interfacename string) (net.Addr, error) {
 	return addrs[0], nil
 }
 
+//Add a wireguard inteface if not exist?
+
 func GetOutboundIP() string {
 	resp, err := http.Get("https://ifconfig.me")
 	if err != nil {

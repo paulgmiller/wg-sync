@@ -4,12 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"net"
 	"time"
 
-	"github.com/paulgmiller/wg-sync/nethelpers"
 	"github.com/paulgmiller/wg-sync/pretty"
 )
 
@@ -62,7 +60,7 @@ type cidrAllocator interface {
 
 type wgDevice interface {
 	PublicKey() string
-	ListenPort() int
+	Endpoint() string
 	LookupPeer(publickey string) (string, bool)
 	AddPeer(publickey, cidr string) error
 }
@@ -105,7 +103,7 @@ func (j *joiner) HaddleJoins(ctx context.Context) error {
 				continue
 			}
 			// Deserialize the JSON data into a Message struct
-			// todo byte fields rather than json just to make it really tight?
+			// todo byte fields rather than json just to make it really tight? binary/reader/writer? proto
 			var jreq Request
 			err = json.Unmarshal(buf[:n], &jreq)
 			if err != nil {
@@ -171,8 +169,8 @@ func (j *joiner) GenerateResponse(jreq Request) (Response, error) {
 			{
 				PublicKey: j.dev.PublicKey(),
 				//is the right ting to do?
-				AllowedIPs: j.alloc.CIDR().String(),                                              //too much throttle down to /32?
-				Endpoint:   fmt.Sprintf("%s:%d", nethelpers.GetOutboundIP(), j.dev.ListenPort()), //just pass this in instead of trying to detect it?
+				AllowedIPs: j.alloc.CIDR().String(), //too much throttle down to /32?
+				Endpoint:   j.dev.Endpoint(),
 			},
 		},
 	}, nil

@@ -7,6 +7,7 @@ import (
 	"log"
 
 	"github.com/paulgmiller/wg-sync/udpjoin"
+	"github.com/paulgmiller/wg-sync/wghelpers"
 	"github.com/spf13/cobra"
 )
 
@@ -21,18 +22,21 @@ var addCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(addCmd)
 	joinServer = *addCmd.Flags().StringP("server", "s", "127.0.0.1"+defaultJoinPort, "server ip  to send udp request to")
+	thetoken = *addCmd.Flags().StringP("token", "t", "empty")
 }
 
-var joinServer string
+var joinServer, thetoken string
 
 func add(cmd *cobra.Command, args []string) error {
-	/*d0, err := wghelpers.GetDevice()
+	d0, err := wghelpers.GetDevice()
 	if err != nil {
+		//TODO just add an interface?
 		return err
-	}*/
+	}
+
 	jreq := udpjoin.Request{
-		PublicKey: "DEADBEEFDEADBEEF", //d0.PublicKey.String(),
-		AuthToken: "HOKEYPOKEYSMOKEY",
+		PublicKey: d0.PublicKey(),
+		AuthToken: thetoken,
 	}
 
 	resp, err := udpjoin.Send(joinServer, jreq)
@@ -40,17 +44,6 @@ func add(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	log.Printf("got %s", resp.Assignedip)
-
-	jreq2 := udpjoin.Request{
-		PublicKey: "amMRWDvsLUmNHn52xer2yl/UaAkXnDrd/HxUTRkEGXc=", //d0.PublicKey.String(),
-		AuthToken: "TOTALLYSECRET",
-	}
-	resp, err = udpjoin.Send(joinServer, jreq2)
-	if err != nil {
-		return err
-	}
-	log.Printf("got %s", resp.Assignedip)
-	return nil
 
 }
 

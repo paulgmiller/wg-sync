@@ -36,6 +36,7 @@ func init() {
 	//probably have to pass in public ip and maybe cidr?
 }
 
+// move to udpjoinut i guess
 type cidrAllocatorImpl struct{}
 
 func (c cidrAllocatorImpl) Allocate() (net.IP, error) {
@@ -66,6 +67,7 @@ func serve(cmd *cobra.Command, args []string) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/peers", Peers)
 	mux.Handle("/token", t)
+	//add a validate one for fun?
 
 	srv := http.Server{Addr: ":8888", Handler: mux}
 
@@ -81,14 +83,13 @@ func serve(cmd *cobra.Command, args []string) error {
 	}()
 
 	//get this lazily for each add.
-	wg, err := wghelpers.GetDevice()
+	wg, err := wghelpers.WithCidr("10.0.0.0/24")
 	if err != nil {
 		return err
 	}
-	alloc := cidrAllocatorImpl{}
-	joiner := udpjoin.New(t, alloc, wg)
+	joiner := udpjoin.New(t, wg, wg)
 	if password != "" {
-		joiner = udpjoin.New(dumbpassword(password), alloc, wg)
+		joiner = udpjoin.New(dumbpassword(password), wg, wg)
 	}
 	err = joiner.HaddleJoins(ctx)
 	if err != nil {
