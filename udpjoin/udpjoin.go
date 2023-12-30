@@ -156,7 +156,9 @@ func (j *joiner) GenerateResponse(jreq Request) (Response, error) {
 		//if we crash here we lose the ip. Combine allocator and wg device?
 		//so that allocate takes a public key and adds the peer
 		//wierd to add the slash /32.
-		j.dev.AddPeer(jreq.PublicKey, assignedip)
+		if err := j.dev.AddPeer(jreq.PublicKey, assignedip); err != nil {
+			return Response{}, err
+		}
 	}
 
 	//add the peer to us before we return anything

@@ -32,7 +32,7 @@ func New(p wgtypes.Peer) Peer {
 
 func Ini(iniFile *ini.File, peers ...Peer) error {
 	for _, p := range peers {
-		sec, err := iniFile.NewSection("PEER")
+		sec, err := iniFile.NewSection("Peer")
 		if err != nil {
 			return err
 		}

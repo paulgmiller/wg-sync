@@ -2,6 +2,7 @@ package wghelpers
 
 import (
 	"fmt"
+	"log"
 	"net"
 
 	"github.com/paulgmiller/wg-sync/nethelpers"
@@ -32,24 +33,52 @@ func (wg *wghelper) CIDR() *net.IPNet {
 }
 
 func (wg *wghelper) Allocate() (net.IP, error) {
-	var candidate net.IP
+	var candidate net.IP = make([]byte, len(wg.firstip))
+	log.Printf("checking %s", wg.firstip)
 	copy(candidate, wg.firstip)
+
+	myAddr, err := nethelpers.GetWireGaurdCIDR(wg.d.Name)
+	if err != nil {
+		return net.IP{}, fmt.Errorf("no more ips left in %s", wg.cidr)
+	}
+	myip, _, err := net.ParseCIDR(myAddr.String())
+	if err != nil {
+		return net.IP{}, fmt.Errorf("couldn't parse  %s", myAddr.String())
+	}
+	log.Printf("my ip is %s", myip.String())
+
 	for {
+		inc(candidate)
+		log.Printf("checking %s", candidate)
+
+		if myip.String() == candidate.String() {
+			continue
+		}
+
 		if !wg.cidr.Contains(candidate) {
 			return net.IP{}, fmt.Errorf("no more ips left in %s", wg.cidr)
 		}
-
+		inUse := false
 		for _, p := range wg.d.Peers {
 			for _, used := range p.AllowedIPs {
-				if !used.Contains(candidate) {
-					return candidate, nil
+				log.Printf("checking %s", used.String())
+				if used.Contains(candidate) {
+					log.Printf("ip %s already in use by %s", candidate, p.PublicKey.String())
+					inUse = true
+					break
 				}
 			}
+			if inUse {
+				break
+			}
 		}
-		inc(candidate)
+		if !inUse {
+			return candidate, nil
+		}
 	}
 }
 
+// just use https://pkg.go.dev/net/netip#Addr.Next
 func inc(ip net.IP) {
 	for i := len(ip) - 1; i >= 0; i-- {
 		ip[i]++
@@ -109,6 +138,7 @@ func (wg *wghelper) AddPeer(publickey, cidr string) error {
 	if err != nil {
 		return err
 	}
+	log.Printf("adding peer %s -> %v", peer.PublicKey, peer.AllowedIPs[0].String())
 	return wgc.ConfigureDevice(wg.d.Name, wgtypes.Config{
 
 		Peers: []wgtypes.PeerConfig{

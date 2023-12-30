@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -34,21 +33,6 @@ func init() {
 	serveCmd.Flags().StringVarP(&password, "password", "p", "", "use a dumb password (insercure)")
 	rootCmd.AddCommand(serveCmd)
 	//probably have to pass in public ip and maybe cidr?
-}
-
-// move to udpjoinut i guess
-type cidrAllocatorImpl struct{}
-
-func (c cidrAllocatorImpl) Allocate() (net.IP, error) {
-	return net.ParseIP("10.0.0.100"), nil
-}
-
-func (c cidrAllocatorImpl) CIDR() *net.IPNet {
-	_, net, err := net.ParseCIDR("10.0.0.0/24")
-	if err != nil {
-		panic(err)
-	}
-	return net
 }
 
 // this is for testing please don't use
@@ -85,7 +69,7 @@ func serve(cmd *cobra.Command, args []string) error {
 	//get this lazily for each add.
 	wg, err := wghelpers.WithCidr("10.0.0.0/24")
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting wg device: %s", err)
 	}
 	joiner := udpjoin.New(t, wg, wg)
 	if password != "" {
